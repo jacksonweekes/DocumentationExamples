@@ -1,0 +1,109 @@
+#Contribution Guidelines
+
+As we are all listed as collaborators in this project, we all have the ability to push directly to master, as well  as merge any pull requests from other branches. However, it is important that we all avoid this to reduce possible merge conflicts. The following document sets out a few guidelines which should help in this regard. It also covers some basic git command line usage. These tasks can also be done from within most IDE's and by various git clients, however I will not cover that here.
+
+##Cloning the repository
+
+To begin working on the code, the first step is to clone the repository to your own computer. On the command line, this is done by navigating to the folder you wish to copy the project to and issuing the command
+
+    git clone <repository-url>
+
+The repository-url can be found on the [main project page](https://github.com/jacksonweekes/COSC320) and will differ depending on whether you use https or ssh to connect to GitHub.
+
+##Working on the code
+
+When working on the code, it is best to keep your 'master' branch clean- that is, do not work do any work on master. Instead, create a new branch on which to make changes. For example, if you were planning to add a new feature to allow a user to manage a cyclist's details, you may create a new branch called cyclist-management. This can be done in one of two ways, either
+
+    git branch cyclist-management
+    git checkout cyclist-management 
+
+This creates our new branch, then checks it out. Alternatively, this can be done with a single command
+
+    git checkout -b cyclist-management
+
+which creates and checks out the new branch at the same time.
+
+By working on branches instead of in the master, it is easy to try things out without worrying about messing up the main code base. If you decide something is not going to work or figure out a better approach, you can simply switch back to the master branch
+
+    git checkout master
+
+and if you decide you no longer need the branch, delete it with
+
+    git branch -d cyclist-management
+
+##Pushing to GitHub
+
+Just as we want to keep the master on our local branch clean, we also want to make sure we do the same for master in our main GitHub repository. To do this, we should ensure we never push directly to master. Instead, we can push to a new branch on GitHub. To continue with the cyclist-management example, if we decided we wanted to push our changes upstream we would use
+
+    git push origin cyclist-management
+
+This will create a new branch in our GitHub repo. Note that a feature does not have to be complete to warrant pushing to a new branch upstream- this is useful for if we want a few people working on a feature together.
+
+##Pull Requests and Merging
+
+Once we have our new branch in GitHub and we are happy with everything, we can look at merging the changes into master. To do this, we want to submit a pull request. To do this we go to the [main project page](https://github.com/jacksonweekes/COSC320) and press the 'New Pull Request' button. This takes us to a new page where we can compare changes between any two branches. The 'base' is the branch we wish to merge our changes into, and 'compare' will be our branch on which we have made those changes. Once we have selected both of these branches we are then given the option to 'Create Pull Request'. It would also be worthwhile leaving a brief description in the pull request detailing what changes have been made in the branch. A list of all open pull requests can be accessed from the main project page.
+
+The last step to actually get these changes accepted into master is to 'merge' the pull request. This can be done by viewing the open pull request, and if there are no merge conflicts with the base branch you can simply press 'Merge pull request' and this process is handled automatically. If there are merge conflicts, things are a little more tricky and they will need to be fixed before the branch can be merged.
+
+Please note that this process does not need to be strictly between a branch and master, any two branches can be merged in this way, and it may prove useful if there are multiple people working on the same feature to do this. For example, we may have a feature-master branch which we would merge all changes into before merging into master.
+
+##Pulling Changes
+
+Once a change has been merged into master on GitHub, you should switch to the master branch on your local computer and pull any changes that have been made. On master, this can be done with just the command
+
+    git pull
+
+If you are working on another branch and someone else has pushed changes to the same branch on GitHub, you will also want to pull these changes to your own computer. Using the cyclist-management example again, we would call (after first ensuring we were on the cyclist-management branch locally) 
+
+    git pull origin cyclist-management
+
+##Git Hooks
+
+Git hooks are scripts that runs when certain git commands are executed. These can be programmed to do a variety of useful tasks. Below are some example scripts that you can add to .git/hooks/ to help prevent accidentally pushing or committing to master.
+
+The following script prevents committing to master on your local computer. It should be saved as .git/hooks/pre-commit
+
+    
+    #!/bin/bash
+    BRANCH=`git rev-parse --abbrev-ref HEAD`
+    
+    if [[ "$BRANCH" == "master" || "$BRANCH" == "develop" ]]; then
+	echo "You are on branch $BRANCH. Are you sure you want to commit to this branch?"
+	echo "If so, commit with -n to bypass this pre-commit hook."
+	exit 1
+    fi
+    exit 0
+
+The next script prevents pushing directly to master on GitHub. It should be saved as .git/hooks/pre-push
+
+    #!/bin/bash
+    protected_branch='master'
+    # check each branch being pushed
+    while read local_ref local_sha remote_ref remote_sha
+    do
+    remote_branch=$(echo $remote_ref | sed -e 's,.*/\(.*\),\1,')
+    if [ $protected_branch = $remote_branch ]
+    then 
+    echo "ABORT PUSH: Not allowed to push directly to $protected_branch. Use --no-verify to force."
+    exit 1 # push will not execute
+    fi
+    done
+    exit 0
+
+Both scripts need to be given permission to run, on Linux this is done with
+
+    chmod +x <file>
+
+I am unsure how this is done on Windows. I am also not totally sure if these scripts will run on Windows- apparently git has a bash interpreter so it *should* run but I have no way to test this. If they do not, maybe try changing the first line
+
+    #!/bin/bash
+
+to
+
+    #!/bin/sh
+
+Also, if you are going to test them, do it in a different repository :-p
+
+##Last Note
+
+Before merging into master, it is probably worth at least getting someone else to have a look at your code and test it out. Use your discretion- if you are just adding comments/Javadocs then this is not so important. If you are making a large change to the code base then give everyone time to check it out and comment. It would also be good to make it a rule that all code must be properly documented before being pulled into master(Javadocs). Doesn't need to be too detailed but will definitely help as the code base gets bigger.
